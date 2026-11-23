@@ -4,6 +4,7 @@
 !backend/
 !backend/*.js
 !backend/seed.json
+!backend/components-seed.json
 !frontend/
 !frontend/**
 !deploy/

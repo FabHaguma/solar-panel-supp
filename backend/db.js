@@ -7,6 +7,10 @@ export const programmingOptions = ['Yes', 'No', 'N/A (panel only)', 'Unknown'];
 export const defaultOptions = ['Yes', 'No', 'N/A', 'Unknown'];
 export const ownerOptions = ['Not asked', 'Asked', 'Contact obtained', 'Follow up', 'Unavailable'];
 export const entryOptions = ['Online listing', 'Catalogue / other source', 'Classified ad', 'Shop visit'];
+export const componentCategories = ['Solar power', 'Hub parts', 'Test gear and consumables'];
+export const componentAvailability = ['In stock', 'Can order', 'Unavailable', 'Unknown'];
+export const priceBases = ['Per unit', 'Total quote', 'Other / unclear'];
+export const schemaVersion = 2;
 
 export const shopFields = [
   'name', 'location', 'phone', 'other_phone', 'email', 'map_url', 'offering', 'questions',
@@ -18,6 +22,14 @@ export const modelFields = [
   'shop_id', 'listing', 'brand', 'watts', 'max_watts', 'price_rwf', 'online_status',
   'source_notes', 'listing_url', 'datasheet_url', 'entry_source', 'stock_status', 'checked_on',
   'confirmed_code', 'programmable', 'programmable_by_default', 'device', 'visit_notes',
+];
+export const componentFields = [
+  'name', 'category', 'quantity', 'description', 'vendor_leads',
+  'budget_min_rwf', 'budget_max_rwf', 'budget_basis',
+];
+export const componentCheckFields = [
+  'component_id', 'vendor', 'vendor_phone', 'vendor_location', 'availability',
+  'amount_rwf', 'price_basis', 'checked_on', 'notes',
 ];
 
 const schema = `
@@ -44,6 +56,26 @@ const insertSql = (table, fields) =>
   `INSERT INTO ${table} (${fields.join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`;
 const values = (row, fields) => fields.map(field => row[field] ?? null);
 
+function addComponentTables(db) {
+  db.exec(`
+    CREATE TABLE components (
+      id INTEGER PRIMARY KEY, version INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL, category TEXT NOT NULL, quantity TEXT, description TEXT,
+      vendor_leads TEXT, budget_min_rwf INTEGER, budget_max_rwf INTEGER, budget_basis TEXT
+    );
+    CREATE TABLE component_checks (
+      id INTEGER PRIMARY KEY, version INTEGER NOT NULL DEFAULT 1,
+      component_id INTEGER NOT NULL REFERENCES components(id) ON DELETE RESTRICT,
+      vendor TEXT NOT NULL, vendor_phone TEXT, vendor_location TEXT, availability TEXT NOT NULL,
+      amount_rwf INTEGER, price_basis TEXT, checked_on TEXT NOT NULL, notes TEXT
+    );
+    CREATE INDEX component_checks_component ON component_checks(component_id, id);
+  `);
+  const seed = JSON.parse(readFileSync(new URL('./components-seed.json', import.meta.url), 'utf8'));
+  const insert = db.prepare(insertSql('components', componentFields));
+  for (const item of seed) insert.run(...values(item, componentFields));
+}
+
 export function openDatabase(path) {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
@@ -51,7 +83,7 @@ export function openDatabase(path) {
   db.exec('BEGIN IMMEDIATE');
   try {
     const { user_version: version } = db.prepare('PRAGMA user_version').get();
-    if (version > 1) throw new Error('This database was created with a newer release.');
+    if (version > schemaVersion) throw new Error('This database was created with a newer release.');
     if (version === 0) {
       db.exec(schema);
       const seed = JSON.parse(readFileSync(new URL('./seed.json', import.meta.url), 'utf8'));
@@ -59,7 +91,10 @@ export function openDatabase(path) {
       const addModel = db.prepare(insertSql('models', modelFields));
       for (const shop of seed.shops) addShop.run(...values(shop, ['id', ...shopFields]));
       for (const model of seed.models) addModel.run(...values(model, modelFields));
-      db.exec('PRAGMA user_version = 1;');
+    }
+    if (version < 2) {
+      addComponentTables(db);
+      db.exec('PRAGMA user_version = 2;');
     }
     db.exec('COMMIT');
   } catch (error) {

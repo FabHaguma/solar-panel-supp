@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   openDatabase, records, shopFields, modelFields, stockOptions, programmingOptions,
-  defaultOptions, ownerOptions, entryOptions,
+  defaultOptions, ownerOptions, entryOptions, componentCategories, componentAvailability,
+  priceBases, componentFields, componentCheckFields, schemaVersion,
 } from './db.js';
 
 const host = process.env.HOST || '127.0.0.1';
@@ -26,6 +27,14 @@ if (production && (!publicOrigin || new URL(publicOrigin).origin !== publicOrigi
 const db = openDatabase(resolve(process.env.DB_PATH || 'data/solpan.sqlite'));
 const shops = records(db, 'shops', shopFields);
 const models = records(db, 'models', modelFields);
+const components = records(db, 'components', componentFields);
+const componentChecks = records(db, 'component_checks', componentCheckFields);
+const collections = {
+  shops: { store: shops, fields: shopFields },
+  models: { store: models, fields: modelFields },
+  components: { store: components, fields: componentFields },
+  'component-checks': { store: componentChecks, fields: componentCheckFields },
+};
 const routes = [
   ['/', 'index.html', 'text/html'],
   ['/assets/css/styles.css', 'assets/css/styles.css', 'text/css'],
@@ -35,7 +44,10 @@ const assets = new Map(routes.map(([route, file, type]) => {
   const path = new URL('../frontend/' + file, import.meta.url);
   return [route, { path, type, content: production ? readFileSync(path) : null }];
 }));
-const options = { stockOptions, programmingOptions, defaultOptions, ownerOptions, entryOptions };
+const options = {
+  stockOptions, programmingOptions, defaultOptions, ownerOptions, entryOptions,
+  componentCategories, componentAvailability, priceBases,
+};
 const hash = value => createHash('sha256').update(value).digest();
 const expectedAuth = username && hash(username + ':' + password);
 const failures = new Map();
@@ -43,6 +55,28 @@ const failures = new Map();
 function json(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data));
+}
+
+function directory() {
+  return {
+    shops: shops.all(), models: models.all(),
+    components: components.all(), componentChecks: componentChecks.all(),
+  };
+}
+
+function exportDirectory(res) {
+  db.exec('BEGIN');
+  let snapshot;
+  try {
+    snapshot = directory();
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+  const exportedAt = new Date().toISOString();
+  res.setHeader('Content-Disposition', 'attachment; filename="solar-supplier-checks-' + exportedAt.slice(0, 10) + '.json"');
+  json(res, 200, { schemaVersion, exportedAt, currency: 'RWF', ...snapshot });
 }
 
 function authorized(req, res) {
@@ -123,11 +157,19 @@ const labels = {
   visited_on: 'Visit date', checked_on: 'Check date', owner_status: 'Owner contact status',
   stock_status: 'Stock check', programmable: 'Programmable',
   programmable_by_default: 'Programmable by default', entry_source: 'Entry source',
+  component_id: 'Component', amount_rwf: 'Quoted price', budget_min_rwf: 'Planned minimum',
+  budget_max_rwf: 'Planned maximum',
 };
-const numeric = { shop_id: [1, Number.MAX_SAFE_INTEGER], watts: [1, 100000], max_watts: [1, 100000], price_rwf: [0, 1e12] };
+const idRange = [1, Number.MAX_SAFE_INTEGER];
+const priceRange = [0, 1e12];
+const numeric = {
+  shop_id: idRange, component_id: idRange, watts: [1, 100000], max_watts: [1, 100000],
+  price_rwf: priceRange, amount_rwf: priceRange, budget_min_rwf: priceRange, budget_max_rwf: priceRange,
+};
 const enumFields = {
   owner_status: ownerOptions, stock_status: stockOptions, entry_source: entryOptions,
   programmable: programmingOptions, programmable_by_default: defaultOptions,
+  category: componentCategories, availability: componentAvailability, price_basis: priceBases,
 };
 const defaults = { owner_status: 'Not asked', stock_status: 'Not checked', entry_source: 'Shop visit' };
 
@@ -145,7 +187,8 @@ function clean(field, raw) {
   if (typeof raw !== 'string') throw new RequestError(400, label + ' must be text.');
   const value = raw.trim();
   if (!value) return fallback;
-  const longText = field.endsWith('_url') || field.endsWith('notes') || field === 'questions' || field === 'offering';
+  const longText = field.endsWith('_url') || field.endsWith('notes') ||
+    ['questions', 'offering', 'description', 'vendor_leads'].includes(field);
   if (value.length > (longText ? 2000 : 300)) throw new RequestError(400, label + ' is too long.');
   if (Object.hasOwn(enumFields, field) && !enumFields[field].includes(value)) {
     throw new RequestError(400, 'Choose a valid ' + label.toLowerCase() + '.');
@@ -167,7 +210,7 @@ function clean(field, raw) {
 }
 
 function validate(type, data, previous) {
-  const fields = type === 'shops' ? shopFields : modelFields;
+  const { fields } = collections[type];
   const row = Object.fromEntries(fields.map(field => [
     field, clean(field, Object.hasOwn(data, field) ? data[field] : previous?.[field]),
   ]));
@@ -176,7 +219,7 @@ function validate(type, data, previous) {
     if (row.owner_status === 'Contact obtained' && !row.owner_phone && !row.owner_email) {
       throw new RequestError(400, 'Add a business phone or email for the owner or decision-maker first.');
     }
-  } else {
+  } else if (type === 'models') {
     if (!row.listing) throw new RequestError(400, 'Enter the panel model or description.');
     if (!row.shop_id || !shops.get(row.shop_id)) throw new RequestError(400, 'Choose an existing shop.');
     if (row.max_watts && (!row.watts || row.max_watts < row.watts)) {
@@ -188,6 +231,18 @@ function validate(type, data, previous) {
     if (row.programmable === 'Yes' && row.programmable_by_default === 'N/A') {
       throw new RequestError(400, 'Choose Yes, No or Unknown for Programmable by default.');
     }
+  } else if (type === 'components') {
+    if (!row.name || !row.category) throw new RequestError(400, 'Enter a component name and category.');
+    if (row.budget_min_rwf != null && row.budget_max_rwf != null && row.budget_min_rwf > row.budget_max_rwf) {
+      throw new RequestError(400, 'Planned maximum must be at least the planned minimum.');
+    }
+  } else {
+    if (!row.component_id || !components.get(row.component_id)) throw new RequestError(400, 'Choose an existing component.');
+    if (!row.vendor || !row.availability || !row.checked_on) {
+      throw new RequestError(400, 'Enter a vendor, availability and check date.');
+    }
+    if (row.amount_rwf != null && !row.price_basis) throw new RequestError(400, 'Choose how the price was quoted.');
+    if (row.amount_rwf == null) row.price_basis = null;
   }
   return row;
 }
@@ -208,12 +263,13 @@ async function handle(req, res) {
   }
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (req.method === 'GET' && pathname === '/api/v1/directory') {
-    return json(res, 200, { shops: shops.all(), models: models.all(), options });
+    return json(res, 200, { ...directory(), options });
   }
-  const match = /^\/api\/v1\/(shops|models)(?:\/([1-9]\d*))?$/.exec(pathname);
+  if (req.method === 'GET' && pathname === '/api/v1/export') return exportDirectory(res);
+  const match = /^\/api\/v1\/(shops|models|components|component-checks)(?:\/([1-9]\d*))?$/.exec(pathname);
   if (match && ((req.method === 'POST' && !match[2]) || (req.method === 'PUT' && match[2]))) {
     const [, type, rawId] = match;
-    const store = type === 'shops' ? shops : models;
+    const { store } = collections[type];
     const id = rawId ? Number(rawId) : null;
     const previous = Number.isSafeInteger(id) ? store.get(id) : null;
     if (rawId && !previous) throw new RequestError(404, 'This record was not found.');

@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#122630">
   <title>Solar supplier checks</title>
-  <link rel="stylesheet" href="/assets/css/styles.css">
-  <script type="module" src="/assets/js/main.js"></script>
+  <link rel="stylesheet" href="/assets/css/styles.css?v=2">
+  <script type="module" src="/assets/js/main.js?v=2"></script>
 </head>
 <body>
   <header class="masthead">
@@ -19,7 +19,15 @@
       <button class="button header-button" id="add-shop" disabled>+ Add shop</button>
     </div>
   </header>
-  <main class="shell layout">
+  <nav class="shell section-nav" aria-label="Work areas">
+    <div class="section-tabs">
+      <a class="section-tab" id="panels-tab" href="/" aria-current="page">Panels &amp; shops</a>
+      <a class="section-tab" id="components-tab" href="#components">Components</a>
+    </div>
+    <a class="button export-link" href="/api/v1/export" download>Download JSON</a>
+  </nav>
+  <main>
+    <div class="shell layout">
     <section class="directory" aria-labelledby="shops-heading">
       <div class="directory-head">
         <h2 id="shops-heading">Shops</h2>
@@ -38,6 +46,25 @@
     </section>
     <section class="workspace" id="workspace" aria-label="Selected shop">
       <p class="muted panel-message">Loading supplier data…</p>
+    </section>
+    </div>
+    <section class="shell components-page" id="components-page" aria-labelledby="components-heading" hidden>
+      <div class="component-toolbar">
+        <div class="section-heading">
+          <div>
+            <h2 id="components-heading">Components</h2>
+            <p class="muted" id="component-progress" aria-live="polite"></p>
+          </div>
+          <button class="button primary" id="add-component" disabled>+ Add component</button>
+        </div>
+        <div class="component-filters">
+          <label for="component-search" class="visually-hidden">Search components</label>
+          <input id="component-search" type="search" placeholder="Search components or vendors" autocomplete="off">
+          <label for="component-category" class="visually-hidden">Filter components by category</label>
+          <select id="component-category"><option value="">All categories</option></select>
+        </div>
+      </div>
+      <div id="component-list"><p class="muted panel-message">Loading components…</p></div>
     </section>
   </main>
   <footer class="shell site-footer">

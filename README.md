@@ -1,6 +1,6 @@
 # Solar supplier checks
 
-Kigali supplier directory and visit tracker. The initial SQLite database imports 18 shop and branch entries and 72 branch-specific panel and sourcing records from the public research workbook.
+Kigali supplier directory and visit tracker. The initial SQLite database imports 18 shop and branch entries, 72 branch-specific panel and sourcing records, and 24 components from the project checklist.
 
 ## Deploy to solpan.haguma.com
 
@@ -36,11 +36,15 @@ Open [solpan.haguma.com](https://solpan.haguma.com) and sign in with the credent
 
 To update, run `git pull --ff-only` and `docker-compose up -d --build` from the VPS app directory. To tag images with the release commit, run `SOLPAN_TAG="$(git rev-parse --short HEAD)" docker-compose up -d --build`. To stop, run `docker-compose down`. The named volume `solar_panel_supp_data` keeps the database across both commands.
 
+The Components release adds two tables on startup and preserves the shop, owner and panel records. Take a SQLite snapshot before this first update using the command below. The earlier release only supports schema 1. After the upgrade, use a forward fix to keep new records if a rollback is needed.
+
 ## Use on a visit
 
 1. Open the shop and use **Record visit** to save the date and shop notes.
 2. Use **Check model** for availability, the exact model code, and programming. Use **Add model** for something you find in the shop that was missing from the research.
 3. Use **Update contact** to record the owner or decision-maker's business contact, where you got it, and any follow-up. The public business contact is shown separately.
+4. Open **Components** to check the project parts. Use **Vendor check** to record availability, a price in RWF, the vendor's phone and location, and comments. Add another check for each vendor you compare. The planned budget is shown above the actual quotes.
+5. Use **Download JSON** from either tab to export the complete directory and the current checks. The file includes saved contact details and notes.
 
 For a plain PV module use **N/A (panel only)**. For a kit or smart module, record the electronics and whether their settings are adjustable as sold.
 

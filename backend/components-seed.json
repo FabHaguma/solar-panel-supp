@@ -1,0 +1,192 @@
+[
+  {
+    "name": "Solar panel",
+    "category": "Solar power",
+    "quantity": "1 × 200 W or 2 × 100 W",
+    "description": "200 W, 12 V nominal, monocrystalline, 36-cell type. Target open-circuit voltage about 22–29 V. The plan allows two 100 W panels in parallel. Verify compatibility with the controller.",
+    "vendor_leads": "Kinigi Energy or Great Lakes Energy.",
+    "budget_min_rwf": 150000,
+    "budget_max_rwf": 250000,
+    "budget_basis": "Panel budget"
+  },
+  {
+    "name": "LiFePO4 battery",
+    "category": "Solar power",
+    "quantity": "1",
+    "description": "12.8 V, 100 Ah. BMS rated at least 100 A with low-temperature cutoff. Look for a unit made in 2025 or later and a written warranty.",
+    "vendor_leads": "Shopit.rw (Snadi), Kinigi Energy, Great Lakes Energy or African Energy.",
+    "budget_min_rwf": 290000,
+    "budget_max_rwf": 500000,
+    "budget_basis": "Battery budget"
+  },
+  {
+    "name": "DC breaker for the panel",
+    "category": "Solar power",
+    "quantity": "1",
+    "description": "16 A, DC-rated.",
+    "vendor_leads": "Kinigi Energy or Great Lakes Energy."
+  },
+  {
+    "name": "Battery fuse with holder",
+    "category": "Solar power",
+    "quantity": "1",
+    "description": "About 30 A, including a holder.",
+    "vendor_leads": "Auto-electrical shops in Nyabugogo."
+  },
+  {
+    "name": "6-way blade fuse block",
+    "category": "Solar power",
+    "quantity": "1 block, plus fuses and spares",
+    "description": "Six-way block with 3 A blade fuses. Plan on one fuse per socket and keep spares."
+  },
+  {
+    "name": "Solar cable and MC4 leads",
+    "category": "Solar power",
+    "quantity": "5–10 m of each colour + 2 leads",
+    "description": "6 mm² solar cable in red and black, plus two ready-made MC4 leads."
+  },
+  {
+    "name": "Battery leads",
+    "category": "Solar power",
+    "quantity": "Short leads",
+    "description": "6 mm² battery leads with ring lugs crimped in the shop."
+  },
+  {
+    "name": "Battery and controller box",
+    "category": "Solar power",
+    "quantity": "1",
+    "description": "Lockable and ventilated, steel or plastic. The plan places it out of direct sun.",
+    "vendor_leads": "Quartier Mateus or Nyabugogo.",
+    "budget_min_rwf": 30000,
+    "budget_max_rwf": 60000,
+    "budget_basis": "Box budget"
+  },
+  {
+    "name": "Panel frame",
+    "category": "Solar power",
+    "quantity": "1",
+    "description": "Angle-iron frame with bolts, tilted about 10° for rain runoff.",
+    "vendor_leads": "Local metal workshop.",
+    "budget_min_rwf": 40000,
+    "budget_max_rwf": 80000,
+    "budget_basis": "Frame budget"
+  },
+  {
+    "name": "ESP32 dev board",
+    "category": "Hub parts",
+    "quantity": "2",
+    "description": "Original ESP32 with Wi-Fi and Bluetooth. Match the pinout in the project plan. ESP32-S2, ESP32-S3 and ESP32-C3 have different pinouts.",
+    "vendor_leads": "Faranux (about 15,340 RWF each) or SoftTech (13,500 RWF each).",
+    "budget_min_rwf": 13500,
+    "budget_max_rwf": 15340,
+    "budget_basis": "Per board, vendor estimates"
+  },
+  {
+    "name": "6-channel 5 V relay board",
+    "category": "Hub parts",
+    "quantity": "2",
+    "description": "Six-channel relay module with 5 V control.",
+    "vendor_leads": "Faranux.",
+    "budget_min_rwf": 9440,
+    "budget_max_rwf": 9440,
+    "budget_basis": "Approximate per board"
+  },
+  {
+    "name": "INA219 current sensor (MCU-219)",
+    "category": "Hub parts",
+    "quantity": "7",
+    "description": "One per socket plus one spare. Ask for the header pins to be soldered.",
+    "vendor_leads": "Faranux.",
+    "budget_min_rwf": 5310,
+    "budget_max_rwf": 5310,
+    "budget_basis": "Approximate per sensor"
+  },
+  {
+    "name": "5 V step-down converter",
+    "category": "Hub parts",
+    "quantity": "2",
+    "description": "XL4015 (5 A) or LM2596.",
+    "vendor_leads": "Faranux."
+  },
+  {
+    "name": "Controller signal resistors",
+    "category": "Hub parts",
+    "quantity": "A few of each",
+    "description": "10 kΩ and 20 kΩ resistors for the controller signal. Confirm both values."
+  },
+  {
+    "name": "Wiring parts",
+    "category": "Hub parts",
+    "quantity": "Assorted",
+    "description": "Screw terminal blocks, Dupont jumper wires and a perfboard.",
+    "vendor_leads": "Faranux or SoftTech."
+  },
+  {
+    "name": "Hub box",
+    "category": "Hub parts",
+    "quantity": "1",
+    "description": "Weatherproof IP65 enclosure, about 250 × 200 × 120 mm, with six socket holes.",
+    "vendor_leads": "Electrical wholesalers in Quartier Mateus."
+  },
+  {
+    "name": "Soldering iron and solder",
+    "category": "Hub parts",
+    "quantity": "If needed",
+    "description": "For the sensor header pins if soldering is unavailable at the shop."
+  },
+  {
+    "name": "MTN 4G MiFi",
+    "category": "Test gear and consumables",
+    "quantity": "1",
+    "description": "4G MiFi device with a planned 30 GB monthly bundle. The checklist references *345# for the bundle.",
+    "vendor_leads": "MTN service centre.",
+    "budget_min_rwf": 50000,
+    "budget_max_rwf": 60000,
+    "budget_basis": "Planned budget"
+  },
+  {
+    "name": "Customer charging cables",
+    "category": "Test gear and consumables",
+    "quantity": "14",
+    "description": "6 × USB-A to micro-USB, 6 × USB-C to USB-C, 2 × USB-A to Lightning.",
+    "vendor_leads": "Phone-accessory shops."
+  },
+  {
+    "name": "Test phones",
+    "category": "Test gear and consumables",
+    "quantity": "2",
+    "description": "Low-cost itel or Tecno Android phones with USB-C to use as test loads.",
+    "vendor_leads": "Phone shops.",
+    "budget_min_rwf": 140000,
+    "budget_max_rwf": 220000,
+    "budget_basis": "Planned budget for the two phones"
+  },
+  {
+    "name": "Multimeter",
+    "category": "Test gear and consumables",
+    "quantity": "1",
+    "description": "DT9205A.",
+    "vendor_leads": "Faranux.",
+    "budget_min_rwf": 18880,
+    "budget_max_rwf": 18880,
+    "budget_basis": "Approximate planned price"
+  },
+  {
+    "name": "Consumables",
+    "category": "Test gear and consumables",
+    "quantity": "Assorted",
+    "description": "Cable ties, insulating tape, screws, wall plugs and a padlock. The plan puts these in the approximately USD 100 cash float."
+  },
+  {
+    "name": "Numbered tamper seals",
+    "category": "Test gear and consumables",
+    "quantity": "At least 4",
+    "description": "For the hub box, battery box and spares."
+  },
+  {
+    "name": "Insulated screwdrivers and pliers",
+    "category": "Test gear and consumables",
+    "quantity": "One set",
+    "description": "Insulated hand tools for work near the battery."
+  }
+]

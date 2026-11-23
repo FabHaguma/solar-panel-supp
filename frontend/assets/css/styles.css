@@ -44,6 +44,12 @@ button, input, select, textarea, a { -webkit-tap-highlight-color: transparent }
 .button.primary:hover { background: var(--green-dark) }
 .button.header-button { background: var(--yellow); border-color: var(--yellow); color: #332709; white-space: nowrap }
 .button.quiet { background: transparent }
+.section-nav { display: flex; justify-content: space-between; gap: .65rem 1rem; align-items: center; margin-top: .85rem; flex-wrap: wrap }
+.section-tabs { display: flex; flex-wrap: wrap; gap: .4rem }
+.section-tab { display: inline-flex; align-items: center; min-height: 2.7rem; padding: .45rem .7rem; border-radius: .5rem; color: var(--muted); font-weight: 650; text-decoration: none }
+.section-tab:hover { background: #e9eee5 }
+.section-tab[aria-current="page"] { background: var(--green-soft); color: var(--green-dark); box-shadow: inset 0 -2px var(--green) }
+.export-link { white-space: nowrap }
 .layout { display: grid; grid-template-columns: minmax(16.5rem, 20rem) minmax(0, 1fr); gap: 1.4rem; align-items: start; margin-block: 1.6rem }
 .directory, .shop-head, .contact-card, .model-section { background: var(--white); border: 1px solid var(--line); border-radius: .8rem }
 .directory { overflow: hidden }
@@ -91,6 +97,22 @@ textarea { min-height: 5.25rem; resize: vertical }
 .programming-note summary, .form-group summary { cursor: pointer; font-weight: 600 }
 .programming-note p { margin-top: .35rem }
 .panel-message { padding: 1rem }
+.components-page { max-width: 69rem; margin-block: 1.4rem }
+.component-toolbar, .component-card { background: var(--white); border: 1px solid var(--line); border-radius: .8rem; padding: clamp(.9rem, 2vw, 1.3rem) }
+.component-toolbar h2 { font-size: 1.45rem }
+.component-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem); gap: .65rem; margin-top: .7rem }
+.component-group { margin-top: 1.4rem }
+.component-group > h3 { margin-bottom: .55rem; font-size: 1.15rem }
+.component-card { min-width: 0; margin-bottom: .65rem }
+.component-card h4 { margin: 0; font-size: 1.085rem; line-height: 1.3; overflow-wrap: anywhere }
+.component-card p { margin-top: .35rem; overflow-wrap: anywhere; white-space: pre-line }
+.component-card .section-heading { flex-wrap: wrap }
+.component-actions { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center }
+.component-quotes { display: grid; gap: .55rem; padding-top: .65rem; margin-top: .65rem; border-top: 1px solid var(--line) }
+.component-quote { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .5rem; padding: .65rem; border-radius: .55rem; background: var(--paper) }
+.component-quote :is(p, a, strong) { overflow-wrap: anywhere }
+.quote-head { display: flex; align-items: start; gap: .35rem .55rem; flex-wrap: wrap }
+.component-quote .quote-price { font-weight: 650 }
 .site-footer { margin-block: 1.25rem; font-size: .875rem; color: var(--muted) }
 .flash { position: fixed; z-index: 5; inset: auto 1rem 1rem auto; max-width: min(24rem, calc(100% - 2rem)); padding: .75rem 1rem; border-radius: .55rem; background: var(--navy); color: #fff; box-shadow: 0 .2rem .9rem #172a312e }
 dialog { width: min(40rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 0; border: 1px solid var(--line); border-radius: .85rem; background: var(--white); color: var(--ink) }
@@ -117,6 +139,7 @@ dialog::backdrop { background: #11283099 }
   .masthead-inner { min-height: 4.45rem }
   .solar-mark { flex-basis: 1.55rem; width: 1.55rem; height: 1.35rem }
   .brand { gap: .55rem }
+  .components-page { margin-block: .85rem }
   .layout { display: block; margin-block: .85rem }
   .workspace { display: none }
   .layout.has-shop .workspace { display: grid }
@@ -130,6 +153,7 @@ dialog::backdrop { background: #11283099 }
   .button { min-height: 2.75rem }
 }
 @media (max-width: 30rem) {
+  .component-filters { grid-template-columns: 1fr }
   .field-grid { grid-template-columns: 1fr }
   .shop-top, .contact-top { flex-wrap: wrap }
   .model-row .status-cell { grid-column: 1 }
