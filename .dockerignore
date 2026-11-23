@@ -5,6 +5,7 @@
 !backend/*.js
 !backend/seed.json
 !backend/components-seed.json
+!backend/shop-pins.json
 !frontend/
 !frontend/**
 !deploy/

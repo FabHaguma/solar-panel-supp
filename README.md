@@ -36,7 +36,7 @@ Open [solpan.haguma.com](https://solpan.haguma.com) and sign in with the credent
 
 To update, run `git pull --ff-only` and `docker-compose up -d --build` from the VPS app directory. To tag images with the release commit, run `SOLPAN_TAG="$(git rev-parse --short HEAD)" docker-compose up -d --build`. To stop, run `docker-compose down`. The named volume `solar_panel_supp_data` keeps the database across both commands.
 
-The Components release adds two tables on startup and preserves the shop, owner and panel records. Take a SQLite snapshot before this first update using the command below. The earlier release only supports schema 1. After the upgrade, use a forward fix to keep new records if a rollback is needed.
+Startup applies additive SQLite upgrades for Components, vendor checks, and shop pins. Take a SQLite snapshot before updating an existing installation using the command below. Older builds may refuse a newer schema. After an upgrade, use a forward fix to keep new records if a rollback is needed.
 
 ## Use on a visit
 
@@ -45,6 +45,10 @@ The Components release adds two tables on startup and preserves the shop, owner 
 3. Use **Update contact** to record the owner or decision-maker's business contact, where you got it, and any follow-up. The public business contact is shown separately.
 4. Open **Components** to check the project parts. Use **Vendor check** to record availability, a price in RWF, the vendor's phone and location, and comments. Add another check for each vendor you compare. The planned budget is shown above the actual quotes.
 5. Use **Download JSON** from either tab to export the complete directory and the current checks. The file includes saved contact details and notes.
+
+Select a shop under **Panels & shops** to see its panel models and any kit components linked by a vendor lead or check. The **Components** tab also filters by saved shops and other vendors. When recording a vendor check, select **Link to a saved shop** to tie it to the exact location or branch.
+
+Under **Nearby shops**, use your device location or choose a saved shop as the starting point. Distances are straight-line estimates. Some initial pins mark buildings or landmarks and are labelled accordingly. Shops without coordinates stay in the list. Use **Edit shop** to paste a latitude and longitude pair or save your position while standing at the shop.
 
 For a plain PV module use **N/A (panel only)**. For a kit or smart module, record the electronics and whether their settings are adjustable as sold.
 

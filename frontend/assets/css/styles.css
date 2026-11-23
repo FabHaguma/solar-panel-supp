@@ -65,6 +65,10 @@ textarea { min-height: 5.25rem; resize: vertical }
 .shop-link[aria-current="page"] { background: var(--green-soft); box-shadow: inset 4px 0 0 var(--green) }
 .shop-link strong, .shop-link small { display: block }
 .shop-link small { color: var(--muted); font-size: .875rem; margin-top: .12rem }
+.shop-link .shop-distance { color: var(--green-dark); font-weight: 650 }
+.nearby-tools { border: 1px solid var(--line); border-radius: .45rem; padding: .5rem .6rem }
+.nearby-tools summary { cursor: pointer; font-weight: 650 }
+.nearby-controls { display: grid; gap: .55rem; margin-top: .6rem }
 .shop-link .arrow { color: var(--green); font-size: 1.35rem; line-height: 1 }
 .workspace { min-width: 0; display: grid; align-content: start; gap: 1rem }
 .mobile-back, .mobile-jump { display: none }
@@ -100,7 +104,7 @@ textarea { min-height: 5.25rem; resize: vertical }
 .components-page { max-width: 69rem; margin-block: 1.4rem }
 .component-toolbar, .component-card { background: var(--white); border: 1px solid var(--line); border-radius: .8rem; padding: clamp(.9rem, 2vw, 1.3rem) }
 .component-toolbar h2 { font-size: 1.45rem }
-.component-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem); gap: .65rem; margin-top: .7rem }
+.component-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 15rem) minmax(10rem, 18rem); gap: .65rem; margin-top: .7rem }
 .component-group { margin-top: 1.4rem }
 .component-group > h3 { margin-bottom: .55rem; font-size: 1.15rem }
 .component-card { min-width: 0; margin-bottom: .65rem }
@@ -113,6 +117,10 @@ textarea { min-height: 5.25rem; resize: vertical }
 .component-quote :is(p, a, strong) { overflow-wrap: anywhere }
 .quote-head { display: flex; align-items: start; gap: .35rem .55rem; flex-wrap: wrap }
 .component-quote .quote-price { font-weight: 650 }
+.shop-components { display: grid; gap: .65rem }
+.shop-component-row { border-top: 1px solid var(--line); padding-top: .65rem }
+.shop-component-row .section-heading { flex-wrap: wrap }
+.pin-action { margin-top: .7rem }
 .site-footer { margin-block: 1.25rem; font-size: .875rem; color: var(--muted) }
 .flash { position: fixed; z-index: 5; inset: auto 1rem 1rem auto; max-width: min(24rem, calc(100% - 2rem)); padding: .75rem 1rem; border-radius: .55rem; background: var(--navy); color: #fff; box-shadow: 0 .2rem .9rem #172a312e }
 dialog { width: min(40rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 0; border: 1px solid var(--line); border-radius: .85rem; background: var(--white); color: var(--ink) }
@@ -140,6 +148,7 @@ dialog::backdrop { background: #11283099 }
   .solar-mark { flex-basis: 1.55rem; width: 1.55rem; height: 1.35rem }
   .brand { gap: .55rem }
   .components-page { margin-block: .85rem }
+  .component-filters { grid-template-columns: 1fr }
   .layout { display: block; margin-block: .85rem }
   .workspace { display: none }
   .layout.has-shop .workspace { display: grid }
@@ -153,7 +162,6 @@ dialog::backdrop { background: #11283099 }
   .button { min-height: 2.75rem }
 }
 @media (max-width: 30rem) {
-  .component-filters { grid-template-columns: 1fr }
   .field-grid { grid-template-columns: 1fr }
   .shop-top, .contact-top { flex-wrap: wrap }
   .model-row .status-cell { grid-column: 1 }

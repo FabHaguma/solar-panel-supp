@@ -1,3 +1,5 @@
+import { distanceKm, findVendorMatch, hasCoordinates, parseCoordinates, vendorFilters } from './directory-filters.js';
+
 const $ = selector => document.querySelector(selector);
 const el = (tag, className, ...children) => {
   const node = document.createElement(tag);
@@ -9,7 +11,7 @@ const el = (tag, className, ...children) => {
 const state = {
   shops: [], models: [], components: [], componentChecks: [],
   options: {}, view: location.hash === '#components' ? 'components' : 'panels',
-  shopId: null, stock: '', editor: null,
+  shopId: null, stock: '', editor: null, origin: null, locating: false, locationError: '',
 };
 const layout = $('.layout');
 const shopList = $('#shops');
@@ -102,9 +104,52 @@ function searchValue(record, keys) {
   return keys.map(key => record[key] ?? '').join(' ').toLocaleLowerCase();
 }
 
+function nearbyOrigin() {
+  return state.origin?.shopId
+    ? state.shops.find(shop => shop.id === state.origin.shopId)
+    : state.origin;
+}
+
+function renderNearbyControls(origin) {
+  const pinned = state.shops.filter(hasCoordinates);
+  const select = $('#nearby-origin');
+  select.options.length = 1;
+  for (const shop of pinned) select.add(new Option(shop.name, shop.id));
+  select.value = state.origin?.shopId || '';
+  select.disabled = state.locating || !pinned.length;
+  $('#nearby-radius').disabled = !hasCoordinates(origin);
+  $('#use-location').disabled = state.locating;
+  $('#use-location').textContent = state.locating ? 'Finding location…' : 'Use my location';
+  $('#clear-location').hidden = !state.origin;
+  $('#clear-location').disabled = state.locating;
+  const coverage = pinned.length + ' of ' + state.shops.length + ' shops have map pins.';
+  const message = hasCoordinates(origin)
+    ? 'From ' + origin.name + '. ' + coverage + ' Straight-line distances.'
+    : coverage;
+  $('#nearby-status').textContent = [state.locationError, message].filter(Boolean).join(' ');
+}
+
+function getDeviceLocation(accept, reject) {
+  if (!navigator.geolocation) {
+    reject('Location is unavailable in this browser. Use a saved shop or paste coordinates.');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(({ coords: { latitude, longitude } }) => {
+    accept({ latitude, longitude });
+  }, error => reject(error.code === 1 ? 'Location permission was denied.' : 'Your position could not be found.'),
+  { timeout: 9000, maximumAge: 60000 });
+}
+
+function componentMatch(filter, item) {
+  return findVendorMatch(filter, item, state.componentChecks.filter(check => check.component_id === item.id));
+}
+
 function renderDirectory() {
   const terms = $('#search').value.toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const visitFilter = $('#visit-filter').value;
+  const origin = nearbyOrigin();
+  renderNearbyControls(origin);
+  const radius = Number($('#nearby-radius').value) || Infinity;
   const visible = state.shops.filter(shop => {
     if (visitFilter === 'visited' && !shop.visited_on) return false;
     if (visitFilter === 'unvisited' && shop.visited_on) return false;
@@ -113,15 +158,27 @@ function renderDirectory() {
     const models = state.models.filter(model => model.shop_id === shop.id);
     return terms.every(term => shopText.includes(term) || models.some(model =>
       searchValue(model, ['listing', 'brand', 'confirmed_code', 'watts', 'max_watts']).includes(term),
-    ));
-  });
+    ) || state.components.some(item => {
+      if (!searchValue(item, ['name', 'description']).includes(term)) return false;
+      const match = componentMatch({ shop }, item);
+      return match.lead || match.checks.length;
+    }));
+  }).map(shop => ({
+    shop,
+    distance: hasCoordinates(origin) && hasCoordinates(shop) ? distanceKm(origin, shop) : null,
+  })).filter(row => row.distance == null || row.distance <= radius);
+  if (hasCoordinates(origin)) visible.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   const visited = state.shops.filter(shop => shop.visited_on).length;
   $('#directory-progress').textContent = visited + ' of ' + state.shops.length + ' shops visited';
-  shopList.replaceChildren(...visible.map(shop => {
+  shopList.replaceChildren(...visible.map(({ shop, distance }) => {
     const models = state.models.filter(model => model.shop_id === shop.id);
     const checked = models.filter(model => model.stock_status !== 'Not checked').length;
     const text = models.length ? checked + ' / ' + models.length + ' models checked' : 'Ask for model list';
+    const distanceLabel = shop.id === state.origin?.shopId ? 'Starting shop'
+      : distance == null ? 'Pin needed'
+        : distance < 0.1 ? 'Within 100 m' : 'About ' + distance.toFixed(1) + ' km away';
     const node = el('a', 'shop-link', el('span', '', el('strong', '', shop.name),
+      hasCoordinates(origin) && el('small', 'shop-distance', distanceLabel),
       el('small', '', shop.visited_on ? 'Visited · ' + text : text)), el('span', 'arrow', '›'));
     node.href = '#shop-' + shop.id;
     if (state.shopId === shop.id) node.setAttribute('aria-current', 'page');
@@ -247,14 +304,18 @@ function renderWorkspace() {
   const links = el('div', 'contact-actions',
     safeLink(shop.phone, phone, 'button', false),
     safeLink('Directions', shop.map_url, 'button'),
+    hasCoordinates(shop) && safeLink('Map pin', 'https://www.google.com/maps/search/?api=1&query=' +
+      encodeURIComponent(shop.latitude + ',' + shop.longitude), 'button'),
     whatsapp && safeLink('WhatsApp', 'https://wa.me/' + whatsapp, 'button'),
     shop.email && safeLink('Email', 'mailto:' + shop.email, 'button', false),
   );
   const sources = el('div', 'source-links muted',
     safeLink('Shop source', shop.shop_url), safeLink('Other source', shop.offering_url),
+    safeLink('Pin source', shop.pin_source_url),
   );
   const owner = ownerContact(shop);
   const panels = panelSection(shop);
+  const components = shopComponents(shop);
   const jumpTo = section => {
     section.tabIndex = -1;
     section.focus({ preventScroll: true });
@@ -268,6 +329,7 @@ function renderWorkspace() {
     shop.phone && !phone && el('p', 'muted', shop.phone),
     shop.offering && el('p', 'shop-offer', shop.offering),
     shop.questions && el('p', 'programming-note', shop.questions),
+    shop.pin_note && el('p', 'muted', shop.pin_note),
     sources.childElementCount ? sources : null,
     el('div', 'shop-visit',
       chip(shop.visited_on ? 'Visited ' + dateLabel(shop.visited_on) : 'To visit', shop.visited_on ? 'good' : 'wait'),
@@ -275,10 +337,35 @@ function renderWorkspace() {
       shop.visit_notes && el('span', 'muted', shop.visit_notes)),
     el('div', 'mobile-jump',
       action('Panel models ↓', () => jumpTo(panels)),
+      action('Kit components ↓', () => jumpTo(components)),
       action('Owner contact ↓', () => jumpTo(owner))),
   );
   workspace.replaceChildren(action('‹ All shops', () => selectShop(null), 'mobile-back'),
-    head, el('div', 'contact-grid', publicContact(shop), owner), panels);
+    head, el('div', 'contact-grid', publicContact(shop), owner), components, panels);
+}
+
+function shopComponents(shop) {
+  const items = state.components.flatMap(item => {
+    const match = componentMatch({ shop }, item);
+    return match.lead || match.checks.length ? [{ item, ...match }] : [];
+  });
+  return el('section', 'model-section shop-components',
+    el('div', 'section-heading',
+      el('div', '', el('h2', '', 'Kit components'), el('p', 'muted', items.length + ' linked items')),
+      action(items.length ? 'Open component filter' : 'Browse all components', () => {
+        $('#component-search').value = '';
+        $('#component-category').value = '';
+        refreshVendorFilter(items.length ? 'shop-' + shop.id : '');
+        selectView('components');
+      })),
+    items.length ? items.map(({ item, lead, checks }) => el('article', 'shop-component-row',
+      el('div', 'section-heading',
+        el('div', '', el('h3', '', item.name), item.quantity && el('p', 'muted', 'Quantity ' + item.quantity),
+          lead && !checks.length && el('p', 'muted', 'Vendor lead · Availability to check')),
+        action('+ Vendor check', () => openEditor('component-check', null, item, shop))),
+      checks.length ? el('div', 'component-quotes', ...checks.map(check => componentQuote(check, item, shop))) : null,
+    )) : el('p', 'muted', 'No kit components are linked to this shop yet.'),
+  );
 }
 
 function render() {
@@ -291,7 +378,10 @@ function render() {
     else $(tab).removeAttribute('aria-current');
   }
   if (showingComponents) {
-    if (state.options.componentCategories) renderComponents();
+    if (state.options.componentCategories) {
+      refreshVendorFilter();
+      renderComponents();
+    }
     else if (state.options.stockOptions) componentList.replaceChildren(
       el('p', 'panel-message muted', 'Components are unavailable. Refresh after the server update.'));
   } else if (state.options.stockOptions) {
@@ -309,7 +399,7 @@ function plannedBudget(item) {
   return 'Planned budget ' + range + ' RWF' + (basis ? ' · ' + basis : '');
 }
 
-function componentQuote(check, item) {
+function componentQuote(check, item, shop) {
   const phone = safeLink(check.vendor_phone, phoneHref(check.vendor_phone));
   return el('article', 'component-quote',
     el('div', '',
@@ -321,50 +411,71 @@ function componentQuote(check, item) {
         phone || check.vendor_phone, check.vendor_phone && check.vendor_location ? ' · ' : null, check.vendor_location),
       el('p', 'muted', dateLabel(check.checked_on)),
       check.notes && el('p', '', check.notes)),
-    action('Edit check', () => openEditor('component-check', check, item)),
+    action('Edit check', () => openEditor('component-check', check, item, shop)),
   );
 }
 
-function componentCard(item, checks) {
+function componentCard(item, checks, filter, lead) {
   const budget = plannedBudget(item);
   return el('article', 'component-card',
     el('div', 'section-heading',
       el('div', '', el('h4', '', item.name), item.quantity && el('p', 'muted', 'Quantity ' + item.quantity)),
       el('div', 'component-actions',
         action('Edit details', () => openEditor('component', item)),
-        action('+ Vendor check', () => openEditor('component-check', null, item), 'primary'))),
+        action('+ Vendor check', () => openEditor('component-check', null, item, filter?.shop, filter?.name), 'primary'))),
     item.description && el('p', '', item.description),
     budget && el('p', 'muted', budget),
     item.vendor_leads && el('p', 'muted', 'Vendor leads · ' + item.vendor_leads),
     checks.length
-      ? el('div', 'component-quotes', ...checks.map(check => componentQuote(check, item)))
-      : el('p', 'muted', 'No vendor checks yet'),
+      ? el('div', 'component-quotes', ...checks.map(check => componentQuote(check, item, filter?.shop)))
+      : el('p', 'muted', lead ? 'Vendor lead · Availability to check' : 'No vendor checks yet'),
   );
+}
+
+let vendorOptions = [];
+function refreshVendorFilter(value = $('#component-vendor').value) {
+  const select = $('#component-vendor');
+  const groups = vendorFilters(state.shops, state.components, state.componentChecks);
+  select.options.length = 1;
+  for (const [index, group] of groups.entries()) {
+    if (!group.length) continue;
+    const options = el('optgroup');
+    options.label = index === 0 ? 'Saved shops' : 'Other vendor leads and checks';
+    for (const option of group) options.append(new Option(option.name, option.value));
+    select.append(options);
+  }
+  vendorOptions = groups.flat();
+  select.value = vendorOptions.some(option => option.value === value) ? value : '';
 }
 
 function renderComponents() {
   const terms = $('#component-search').value.toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const category = $('#component-category').value;
+  const filter = vendorOptions.find(option => option.value === $('#component-vendor').value);
   const byComponent = new Map();
   for (const check of state.componentChecks) {
     if (!byComponent.has(check.component_id)) byComponent.set(check.component_id, []);
     byComponent.get(check.component_id).push(check);
   }
-  $('#component-progress').textContent = byComponent.size + ' of ' + state.components.length + ' components checked';
-  const visible = state.components.filter(item => {
-    if (category && item.category !== category) return false;
+  const visible = state.components.flatMap(item => {
+    if (category && item.category !== category) return [];
     const checks = byComponent.get(item.id) || [];
+    const match = filter ? findVendorMatch(filter, item, checks) : { lead: false, checks };
+    if (filter && !match.lead && !match.checks.length) return [];
     const details = searchValue(item, ['name', 'description', 'vendor_leads', 'category']) + ' ' +
-      checks.map(check => searchValue(check, ['vendor', 'vendor_location', 'notes'])).join(' ');
-    return terms.every(term => details.includes(term));
+      match.checks.map(check => searchValue(check, ['vendor', 'vendor_location', 'notes'])).join(' ');
+    return terms.every(term => details.includes(term)) ? [{ item, ...match }] : [];
   });
+  $('#component-progress').textContent = filter || terms.length || category
+    ? visible.length + ' matching components'
+    : byComponent.size + ' of ' + state.components.length + ' components checked';
   const groups = state.options.componentCategories.map(name => {
-    const rows = visible.filter(item => item.category === name);
+    const rows = visible.filter(({ item }) => item.category === name);
     return rows.length ? el('section', 'component-group', el('h3', '', name),
-      ...rows.map(item => {
-        const checks = (byComponent.get(item.id) || []).sort((a, b) =>
+      ...rows.map(({ item, checks, lead }) => {
+        const sorted = [...checks].sort((a, b) =>
           b.checked_on.localeCompare(a.checked_on) || b.id - a.id);
-        return componentCard(item, checks);
+        return componentCard(item, sorted, filter, lead);
       })) : null;
   }).filter(Boolean);
   componentList.replaceChildren(...groups);
@@ -395,8 +506,10 @@ function fieldGrid(fields, data) {
     if (spec.kind === 'select') {
       const choices = spec.placeholder ? ['', ...spec.options] : spec.options;
       for (const choice of choices) {
-        const option = el('option', '', choice || spec.placeholder);
-        option.value = choice;
+        const value = typeof choice === 'object' ? choice.value : choice;
+        const text = typeof choice === 'object' ? choice.label : choice || spec.placeholder;
+        const option = el('option', '', text);
+        option.value = value;
         control.append(option);
       }
     } else if (control.tagName === 'INPUT') {
@@ -417,7 +530,7 @@ function group(label, fields, data) {
   return el('details', 'form-group', el('summary', '', label), fieldGrid(fields, data));
 }
 
-function openEditor(type, record, parent) {
+function openEditor(type, record, parent, linkedShop, vendorHint) {
   const data = { ...record };
   const options = state.options;
   state.editor = { type, record, parent };
@@ -488,8 +601,21 @@ function openEditor(type, record, parent) {
     ], data));
   } else if (type === 'component-check') {
     data.checked_on ||= today();
+    const initialShop = state.shops.find(shop => shop.id === data.shop_id) || linkedShop;
+    if (initialShop) {
+      data.shop_id = initialShop.id;
+      data.vendor ||= initialShop.name;
+      if (!record) {
+        data.vendor_phone ||= initialShop.phone;
+        data.vendor_location ||= initialShop.location;
+      }
+    } else {
+      data.vendor ||= vendorHint;
+    }
     name.textContent = (record ? 'Edit check · ' : 'Vendor check · ') + parent.name;
     fields.replaceChildren(fieldGrid([
+      { ...selectField('shop_id', 'Link to a saved shop',
+        state.shops.map(shop => ({ value: shop.id, label: shop.name })), 'Other vendor'), wide: true },
       field('vendor', 'Shop or vendor', 'text', { required: true, wide: true }),
       field('vendor_phone', 'Vendor phone', 'tel'),
       field('vendor_location', 'Kigali location or landmark'),
@@ -499,14 +625,30 @@ function openEditor(type, record, parent) {
       selectField('price_basis', 'Quote type', options.priceBases, 'Choose if a price was quoted'),
       notesField('notes', 'Comments or product details'),
     ], data));
+    let previousShop = initialShop;
+    form.elements.shop_id.addEventListener('change', () => {
+      const selected = state.shops.find(shop => shop.id === Number(form.elements.shop_id.value));
+      if (selected) form.elements.vendor.value = selected.name;
+      if (!form.elements.vendor_phone.value || form.elements.vendor_phone.value === previousShop?.phone) {
+        form.elements.vendor_phone.value = selected?.phone || '';
+      }
+      if (!form.elements.vendor_location.value || form.elements.vendor_location.value === previousShop?.location) {
+        form.elements.vendor_location.value = selected?.location || '';
+      }
+      previousShop = selected;
+    });
   } else {
     name.textContent = record ? 'Edit shop' : 'Add shop';
+    data.map_coordinates = hasCoordinates(record) ? record.latitude + ', ' + record.longitude : '';
     fields.replaceChildren(fieldGrid([
       field('name', 'Shop / branch', 'text', { required: true, wide: true }),
       field('location', 'Address or nearby landmark', 'text', { wide: true }),
       field('phone', 'Shop phone', 'tel'), field('email', 'Business email', 'email'),
       notesField('other_phone', 'WhatsApp / other line'),
       linkField('map_url', 'Map URL'),
+      field('map_coordinates', 'Map coordinates', 'text', {
+        wide: true, help: 'Paste latitude, longitude from Maps.',
+      }),
       notesField('offering', 'Panel offering'), notesField('questions', 'What to confirm'),
     ], data), group('Public contact and sources', [
       notesField('public_contact', 'Named public contact'),
@@ -514,11 +656,28 @@ function openEditor(type, record, parent) {
       linkField('shop_url', 'Shop source URL'), linkField('contact_url', 'Contact source URL'),
       linkField('offering_url', 'Other source URL'),
     ], data));
+    const input = form.elements.map_coordinates;
+    const pinButton = action('Use device location as shop pin', () => {
+      pinButton.disabled = true;
+      error.hidden = true;
+      const show = message => {
+        if (!input.isConnected || !dialog.open) return;
+        pinButton.disabled = false;
+        error.textContent = message;
+        error.hidden = false;
+      };
+      getDeviceLocation(({ latitude, longitude }) => {
+        if (!input.isConnected || !dialog.open) return;
+        input.value = latitude.toFixed(6) + ', ' + longitude.toFixed(6);
+        pinButton.disabled = false;
+      }, show);
+    });
+    input.closest('.field').append(el('div', 'pin-action', pinButton));
   }
   dialog.showModal();
 }
 
-const numericInputs = new Set(['watts', 'max_watts', 'price_rwf', 'budget_min_rwf', 'budget_max_rwf', 'amount_rwf']);
+const numericInputs = new Set(['shop_id', 'watts', 'max_watts', 'price_rwf', 'budget_min_rwf', 'budget_max_rwf', 'amount_rwf']);
 const editorCollections = {
   model: ['models', 'models', 'Panel check saved.'],
   component: ['components', 'components', 'Component saved.'],
@@ -537,8 +696,20 @@ form.addEventListener('submit', async event => {
   if (record) payload.version = record.version;
   const button = $('#save');
   const error = $('#editor-error');
-  button.disabled = true;
   error.hidden = true;
+  if (type === 'shop') {
+    const text = payload.map_coordinates.trim();
+    const coords = text && parseCoordinates(text);
+    if (text && !coords) {
+      error.textContent = 'Enter coordinates as latitude, longitude. For example, -1.9527, 30.0930.';
+      error.hidden = false;
+      return;
+    }
+    delete payload.map_coordinates;
+    payload.latitude = coords ? coords.latitude : null;
+    payload.longitude = coords ? coords.longitude : null;
+  }
+  button.disabled = true;
   try {
     const saved = await api('/' + endpoint + (record ? '/' + record.id : ''), {
       method: record ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
@@ -567,8 +738,35 @@ $('#add-shop').addEventListener('click', () => openEditor('shop', null));
 $('#add-component').addEventListener('click', () => openEditor('component', null));
 $('#search').addEventListener('input', renderDirectory);
 $('#visit-filter').addEventListener('change', renderDirectory);
+$('#nearby-origin').addEventListener('change', event => {
+  state.origin = event.target.value ? { shopId: Number(event.target.value) } : null;
+  state.locationError = '';
+  renderDirectory();
+});
+$('#nearby-radius').addEventListener('change', renderDirectory);
+$('#clear-location').addEventListener('click', () => {
+  state.origin = null;
+  state.locationError = '';
+  $('#nearby-radius').value = '';
+  renderDirectory();
+});
+$('#use-location').addEventListener('click', () => {
+  state.locating = true;
+  state.locationError = '';
+  renderDirectory();
+  getDeviceLocation(coords => {
+    state.locating = false;
+    state.origin = { ...coords, name: 'your location' };
+    renderDirectory();
+  }, message => {
+    state.locating = false;
+    state.locationError = message;
+    renderDirectory();
+  });
+});
 $('#component-search').addEventListener('input', () => { if (state.options.componentCategories) renderComponents(); });
 $('#component-category').addEventListener('change', () => { if (state.options.componentCategories) renderComponents(); });
+$('#component-vendor').addEventListener('change', renderComponents);
 for (const view of ['components', 'panels']) {
   $('#' + view + '-tab').addEventListener('click', event => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

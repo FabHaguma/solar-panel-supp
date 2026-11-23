@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#122630">
   <title>Solar supplier checks</title>
-  <link rel="stylesheet" href="/assets/css/styles.css?v=2">
-  <script type="module" src="/assets/js/main.js?v=2"></script>
+  <link rel="stylesheet" href="/assets/css/styles.css?v=3">
+  <script type="module" src="/assets/js/main.js?v=3"></script>
 </head>
 <body>
   <header class="masthead">
@@ -41,6 +41,24 @@
           <option value="visited">Visited</option>
           <option value="owner">Owner contact pending</option>
         </select>
+        <details class="nearby-tools">
+          <summary>Nearby shops</summary>
+          <div class="nearby-controls">
+            <button type="button" class="button" id="use-location">Use my location</button>
+            <label class="visually-hidden" for="nearby-origin">Saved starting shop</label>
+            <select id="nearby-origin"><option value="">Start from a saved shop</option></select>
+            <label class="visually-hidden" for="nearby-radius">Distance limit</label>
+            <select id="nearby-radius" disabled>
+              <option value="">Any distance</option>
+              <option value="1">Within 1 km</option>
+              <option value="3">Within 3 km</option>
+              <option value="5">Within 5 km</option>
+              <option value="10">Within 10 km</option>
+            </select>
+            <button type="button" class="button quiet" id="clear-location" hidden>Clear distance sort</button>
+            <p class="muted" id="nearby-status" aria-live="polite"></p>
+          </div>
+        </details>
       </div>
       <nav id="shops" aria-label="Supplier shops"><p class="muted panel-message">Loading shops…</p></nav>
     </section>
@@ -62,6 +80,8 @@
           <input id="component-search" type="search" placeholder="Search components or vendors" autocomplete="off">
           <label for="component-category" class="visually-hidden">Filter components by category</label>
           <select id="component-category"><option value="">All categories</option></select>
+          <label for="component-vendor" class="visually-hidden">Filter components by shop or vendor</label>
+          <select id="component-vendor"><option value="">All shops and vendors</option></select>
         </div>
       </div>
       <div id="component-list"><p class="muted panel-message">Loading components…</p></div>

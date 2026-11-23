@@ -10,13 +10,14 @@ export const entryOptions = ['Online listing', 'Catalogue / other source', 'Clas
 export const componentCategories = ['Solar power', 'Hub parts', 'Test gear and consumables'];
 export const componentAvailability = ['In stock', 'Can order', 'Unavailable', 'Unknown'];
 export const priceBases = ['Per unit', 'Total quote', 'Other / unclear'];
-export const schemaVersion = 2;
+export const schemaVersion = 3;
 
 export const shopFields = [
   'name', 'location', 'phone', 'other_phone', 'email', 'map_url', 'offering', 'questions',
   'public_contact', 'public_contact_phone', 'shop_url', 'contact_url', 'offering_url',
   'owner_name', 'owner_role', 'owner_phone', 'owner_email', 'owner_status', 'owner_notes',
   'visited_on', 'visit_notes',
+  'latitude', 'longitude', 'pin_note', 'pin_source_url',
 ];
 export const modelFields = [
   'shop_id', 'listing', 'brand', 'watts', 'max_watts', 'price_rwf', 'online_status',
@@ -29,8 +30,9 @@ export const componentFields = [
 ];
 export const componentCheckFields = [
   'component_id', 'vendor', 'vendor_phone', 'vendor_location', 'availability',
-  'amount_rwf', 'price_basis', 'checked_on', 'notes',
+  'amount_rwf', 'price_basis', 'checked_on', 'notes', 'shop_id',
 ];
+const initialShopFields = shopFields.slice(0, shopFields.indexOf('latitude'));
 
 const schema = `
   CREATE TABLE shops (
@@ -76,6 +78,28 @@ function addComponentTables(db) {
   for (const item of seed) insert.run(...values(item, componentFields));
 }
 
+function addShopPins(db) {
+  db.exec(`
+    ALTER TABLE shops ADD COLUMN latitude REAL;
+    ALTER TABLE shops ADD COLUMN longitude REAL;
+    ALTER TABLE shops ADD COLUMN pin_note TEXT;
+    ALTER TABLE shops ADD COLUMN pin_source_url TEXT;
+    ALTER TABLE component_checks ADD COLUMN shop_id INTEGER REFERENCES shops(id);
+  `);
+  const pins = JSON.parse(readFileSync(new URL('./shop-pins.json', import.meta.url), 'utf8'));
+  const seed = JSON.parse(readFileSync(new URL('./seed.json', import.meta.url), 'utf8'));
+  const addresses = new Map(seed.shops.map(shop => [shop.id, shop]));
+  const setPin = db.prepare(`
+    UPDATE shops SET latitude = ?, longitude = ?, pin_note = ?, pin_source_url = ?
+    WHERE id = ? AND location IS ? AND map_url IS ?
+  `);
+  for (const pin of pins) {
+    const shop = addresses.get(pin.id);
+    setPin.run(pin.latitude, pin.longitude, pin.pin_note, pin.pin_source_url,
+      pin.id, shop.location, shop.map_url);
+  }
+}
+
 export function openDatabase(path) {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
@@ -87,15 +111,16 @@ export function openDatabase(path) {
     if (version === 0) {
       db.exec(schema);
       const seed = JSON.parse(readFileSync(new URL('./seed.json', import.meta.url), 'utf8'));
-      const addShop = db.prepare(insertSql('shops', ['id', ...shopFields]));
+      const addShop = db.prepare(insertSql('shops', ['id', ...initialShopFields]));
       const addModel = db.prepare(insertSql('models', modelFields));
-      for (const shop of seed.shops) addShop.run(...values(shop, ['id', ...shopFields]));
+      for (const shop of seed.shops) addShop.run(...values(shop, ['id', ...initialShopFields]));
       for (const model of seed.models) addModel.run(...values(model, modelFields));
     }
     if (version < 2) {
       addComponentTables(db);
-      db.exec('PRAGMA user_version = 2;');
     }
+    if (version < 3) addShopPins(db);
+    if (version < schemaVersion) db.exec('PRAGMA user_version = ' + schemaVersion);
     db.exec('COMMIT');
   } catch (error) {
     db.exec('ROLLBACK');

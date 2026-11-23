@@ -39,6 +39,7 @@ const routes = [
   ['/', 'index.html', 'text/html'],
   ['/assets/css/styles.css', 'assets/css/styles.css', 'text/css'],
   ['/assets/js/main.js', 'assets/js/main.js', 'text/javascript'],
+  ['/assets/js/directory-filters.js', 'assets/js/directory-filters.js', 'text/javascript'],
 ];
 const assets = new Map(routes.map(([route, file, type]) => {
   const path = new URL('../frontend/' + file, import.meta.url);
@@ -159,9 +160,11 @@ const labels = {
   programmable_by_default: 'Programmable by default', entry_source: 'Entry source',
   component_id: 'Component', amount_rwf: 'Quoted price', budget_min_rwf: 'Planned minimum',
   budget_max_rwf: 'Planned maximum',
+  latitude: 'Latitude', longitude: 'Longitude',
 };
 const idRange = [1, Number.MAX_SAFE_INTEGER];
 const priceRange = [0, 1e12];
+const coordinates = { latitude: 90, longitude: 180 };
 const numeric = {
   shop_id: idRange, component_id: idRange, watts: [1, 100000], max_watts: [1, 100000],
   price_rwf: priceRange, amount_rwf: priceRange, budget_min_rwf: priceRange, budget_max_rwf: priceRange,
@@ -177,6 +180,12 @@ function clean(field, raw) {
   const label = labels[field] || field.replaceAll('_', ' ');
   const fallback = defaults[field] || null;
   if (raw == null || raw === '') return fallback;
+  if (Object.hasOwn(coordinates, field)) {
+    if (!Number.isFinite(raw) || Math.abs(raw) > coordinates[field]) {
+      throw new RequestError(400, label + ' is outside the allowed range.');
+    }
+    return raw;
+  }
   if (Object.hasOwn(numeric, field)) {
     const [minimum, maximum] = numeric[field];
     if (!Number.isSafeInteger(raw) || raw < minimum || raw > maximum) {
@@ -216,6 +225,13 @@ function validate(type, data, previous) {
   ]));
   if (type === 'shops') {
     if (!row.name) throw new RequestError(400, 'Enter the shop or branch name.');
+    if ((row.latitude == null) !== (row.longitude == null)) {
+      throw new RequestError(400, 'Enter latitude and longitude together.');
+    }
+    if (row.latitude !== (previous?.latitude ?? null) || row.longitude !== (previous?.longitude ?? null)) {
+      row.pin_note = row.latitude == null ? null : 'Pin entered in the app.';
+      row.pin_source_url = null;
+    }
     if (row.owner_status === 'Contact obtained' && !row.owner_phone && !row.owner_email) {
       throw new RequestError(400, 'Add a business phone or email for the owner or decision-maker first.');
     }
@@ -238,6 +254,11 @@ function validate(type, data, previous) {
     }
   } else {
     if (!row.component_id || !components.get(row.component_id)) throw new RequestError(400, 'Choose an existing component.');
+    if (row.shop_id != null) {
+      const shop = shops.get(row.shop_id);
+      if (!shop) throw new RequestError(400, 'Choose an existing shop.');
+      row.vendor = shop.name;
+    }
     if (!row.vendor || !row.availability || !row.checked_on) {
       throw new RequestError(400, 'Enter a vendor, availability and check date.');
     }

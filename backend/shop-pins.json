@@ -1,0 +1,79 @@
+[
+  {
+    "id": 1,
+    "latitude": -1.9360515,
+    "longitude": 30.0849337,
+    "pin_note": "Approximate KG 550 St reference from the parent company’s map. Confirm pickup address.",
+    "pin_source_url": "https://www.1000hillstechnology.com/"
+  },
+  {
+    "id": 2,
+    "latitude": -1.93935,
+    "longitude": 30.05917,
+    "pin_note": "Davis & Shirtliff’s published Kigali branch pin.",
+    "pin_source_url": "https://www.dayliff.com/find-us"
+  },
+  {
+    "id": 3,
+    "latitude": -1.9564,
+    "longitude": 30.11642,
+    "pin_note": "Davis & Shirtliff’s published Remera branch pin.",
+    "pin_source_url": "https://www.dayliff.com/find-us"
+  },
+  {
+    "id": 4,
+    "latitude": -1.9231873,
+    "longitude": 30.0705108,
+    "pin_note": "Davis & Shirtliff’s published Gakiriro branch pin.",
+    "pin_source_url": "https://www.dayliff.com/index.php/find-us/65?tmpl=component"
+  },
+  {
+    "id": 5,
+    "latitude": -1.95272,
+    "longitude": 30.09296,
+    "pin_note": "Kigali Heights building pin. Kinigi lists the fourth floor.",
+    "pin_source_url": "https://mapcarta.com/W472371264"
+  },
+  {
+    "id": 6,
+    "latitude": -1.9398727,
+    "longitude": 30.0605296,
+    "pin_note": "Mashariki Life’s published showroom pin.",
+    "pin_source_url": "https://maps.app.goo.gl/ui2Ue5inixXUDiXMA"
+  },
+  {
+    "id": 8,
+    "latitude": -1.9722075,
+    "longitude": 30.0839249,
+    "pin_note": "Approximate office area from Sai Office’s embedded map. Confirm the entrance.",
+    "pin_source_url": "https://www.sai-office.com/rwanda/contact-us/"
+  },
+  {
+    "id": 10,
+    "latitude": -1.9427056,
+    "longitude": 30.0623166,
+    "pin_note": "IPOSITA building pin for the marketplace office. Confirm seller pickup separately.",
+    "pin_source_url": "https://rw.near-place.com/rwanda-post-office-iposita-kn-4-street-kigali/es"
+  },
+  {
+    "id": 12,
+    "latitude": -1.9322266,
+    "longitude": 30.0723877,
+    "pin_note": "Map pin linked from Solid Hardware’s site. Check the showroom address before visiting.",
+    "pin_source_url": "https://solidhardware.rw/solar-systems/"
+  },
+  {
+    "id": 14,
+    "latitude": -1.9597,
+    "longitude": 30.10696,
+    "pin_note": "Sawa City Kisimenti supermarket landmark. Confirm the office entrance.",
+    "pin_source_url": "https://mapcarta.com/N5447950282"
+  },
+  {
+    "id": 17,
+    "latitude": -1.95242,
+    "longitude": 30.09186,
+    "pin_note": "Kigali Alliance Business Centre building pin. Solektra lists the sixth floor.",
+    "pin_source_url": "https://rw.geoview.info/kigali_alliance_business_centre%2C20025796310w"
+  }
+]
