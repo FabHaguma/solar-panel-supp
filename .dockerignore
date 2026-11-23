@@ -1,0 +1,11 @@
+*
+!Dockerfile
+!package.json
+!backend/
+!backend/*.js
+!backend/seed.json
+!frontend/
+!frontend/**
+!deploy/
+!deploy/Dockerfile.frontend
+!deploy/nginx.conf
